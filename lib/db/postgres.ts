@@ -8,7 +8,11 @@ type Sql = ReturnType<typeof postgres>;
 // compatible with Supabase's transaction-mode connection pooler (PgBouncer),
 // which does not support prepared statements.
 const globalForDb = globalThis as unknown as { _nimbusSql?: Sql };
-const sql: Sql = globalForDb._nimbusSql ?? postgres(process.env.DATABASE_URL as string, { prepare: false });
+const DATABASE_URL = process.env.DATABASE_URL as string;
+// Supabase requires SSL; default to it unless the URL already specifies sslmode.
+const sslOption = /sslmode=/.test(DATABASE_URL) ? undefined : ("require" as const);
+const sql: Sql =
+  globalForDb._nimbusSql ?? postgres(DATABASE_URL, { prepare: false, ssl: sslOption });
 if (process.env.NODE_ENV !== "production") globalForDb._nimbusSql = sql;
 
 // Mirror SQLite's "YYYY-MM-DD HH:MM:SS" UTC string so the frontend date parser
