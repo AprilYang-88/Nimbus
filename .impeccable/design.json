@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-01T15:16:57Z",
+  "title": "Design System: Nimbus Notes",
+  "extensions": {
+    "colorMeta": {
+      "forest-canopy": {
+        "role": "primary",
+        "displayName": "Forest Canopy",
+        "canonical": "#234d3d",
+        "tonalRamp": ["#0e1e18", "#173329", "#234d3d", "#356b57", "#5b8d79", "#8cb4a4", "#bdd8ce", "#e6f1ed"]
+      },
+      "moss-ink": {
+        "role": "neutral",
+        "displayName": "Moss Ink",
+        "canonical": "#17221d",
+        "tonalRamp": ["#0b100e", "#17221d", "#2d3d36", "#52635c", "#7e8c87", "#aab4b0", "#d3dad7", "#f1f4f3"]
+      },
+      "soft-ground": {
+        "role": "neutral",
+        "displayName": "Soft Ground",
+        "canonical": "#f6f3eb",
+        "tonalRamp": ["#201f1b", "#45433d", "#6e6b62", "#98958b", "#c2bfb6", "#ddd9d1", "#eeeae2", "#f6f3eb"]
+      },
+      "leaf-paper": {
+        "role": "neutral",
+        "displayName": "Leaf Paper",
+        "canonical": "#fffdf8",
+        "tonalRamp": ["#25241f", "#4a4943", "#73716a", "#9d9b94", "#c6c4bd", "#e2dfd9", "#f2efe9", "#fffdf8"]
+      },
+      "new-growth": {
+        "role": "secondary",
+        "displayName": "New Growth",
+        "canonical": "#dceeb5",
+        "tonalRamp": ["#1d2810", "#3a4d23", "#5c7538", "#819e55", "#a7c676", "#c5df96", "#dceeb5", "#f1f8df"]
+      },
+      "terracotta-marker": {
+        "role": "tertiary",
+        "displayName": "Terracotta Marker",
+        "canonical": "#e77b4c",
+        "tonalRamp": ["#34150b", "#652b18", "#974127", "#c55b36", "#e77b4c", "#f0a17d", "#f6c8b3", "#fce8df"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Garden Display",
+        "purpose": "Homepage headline only."
+      },
+      "headline": {
+        "displayName": "Section Headline",
+        "purpose": "Composer and knowledge-flow headings."
+      },
+      "title": {
+        "displayName": "Note Title",
+        "purpose": "Card and note titles."
+      },
+      "body": {
+        "displayName": "Reading Body",
+        "purpose": "Input, note content, and descriptions."
+      },
+      "label": {
+        "displayName": "Short Label",
+        "purpose": "Sparse section cues and metadata."
+      }
+    },
+    "shadows": [
+      {
+        "name": "composer-growth-offset",
+        "value": "8px 8px 0 var(--lime)",
+        "purpose": "Structural emphasis for the quick-capture composer."
+      },
+      {
+        "name": "card-hover-lift",
+        "value": "5px 5px 0 var(--lime)",
+        "purpose": "Transient hover feedback for note cards."
+      },
+      {
+        "name": "drawer-overlay",
+        "value": "-15px 0 45px rgba(23, 34, 29, .12)",
+        "purpose": "Separates the note detail drawer from the knowledge flow."
+      }
+    ],
+    "motion": [
+      {
+        "name": "card-state-transition",
+        "value": "transform .2s, box-shadow .2s",
+        "purpose": "Fast state feedback on note-card hover."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "mobile",
+        "value": "640px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Forest-green primary action for saving notes and confirming inline changes.",
+      "html": "<button class=\"ds-btn-primary\">收进 Nimbus</button>",
+      "css": ".ds-btn-primary { padding: 11px 16px; border: 0; color: #fffdf8; background: #234d3d; font: 700 13px Arial, sans-serif; cursor: pointer; } .ds-btn-primary:hover { background: #173329; } .ds-btn-primary:focus-visible { outline: 3px solid #e77b4c; outline-offset: 3px; } .ds-btn-primary:active { transform: translateY(1px); } .ds-btn-primary:disabled { opacity: .45; cursor: not-allowed; }"
+    },
+    {
+      "name": "Tag Chip",
+      "kind": "chip",
+      "refersTo": "tag-chip",
+      "description": "Soft meadow chip for AI-generated note tags.",
+      "html": "<span class=\"ds-tag-chip\">向量数据库</span>",
+      "css": ".ds-tag-chip { display: inline-block; padding: 5px 8px; border-radius: 30px; background: #edf3dd; color: #526738; font: 400 11px Arial, sans-serif; }"
+    },
+    {
+      "name": "Note Card",
+      "kind": "card",
+      "refersTo": "note-card",
+      "description": "Flat paper note card that lifts only during hover.",
+      "html": "<article class=\"ds-note-card\"><time>6月1日 22:30</time><h3>向量数据库与 RAG</h3><p>向量数据库为语义检索提供相似度搜索能力。</p><span class=\"ds-tag-chip\">RAG</span></article>",
+      "css": ".ds-note-card { width: 280px; min-height: 220px; padding: 20px; border: 1px solid rgba(23,34,29,.14); background: #fffdf8; color: #17221d; transition: transform .2s, box-shadow .2s; } .ds-note-card:hover { transform: translateY(-5px); box-shadow: 5px 5px 0 #dceeb5; } .ds-note-card:focus-within { outline: 3px solid #e77b4c; outline-offset: 3px; } .ds-note-card time, .ds-note-card p { color: #68756e; font: 400 13px/1.7 Arial, sans-serif; } .ds-note-card h3 { margin: 24px 0 10px; font: 400 22px/1.25 Georgia, serif; } .ds-tag-chip { display: inline-block; padding: 5px 8px; border-radius: 30px; background: #edf3dd; color: #526738; font: 400 11px Arial, sans-serif; }"
+    },
+    {
+      "name": "Inline Field",
+      "kind": "input",
+      "description": "Simple bordered field for editing tags and selecting note links.",
+      "html": "<input class=\"ds-inline-field\" value=\"RAG, 向量数据库\" />",
+      "css": ".ds-inline-field { min-width: 240px; padding: 10px; border: 1px solid rgba(23,34,29,.14); background: #fffdf8; color: #17221d; font: 400 13px Arial, sans-serif; } .ds-inline-field:focus-visible { outline: 3px solid #dceeb5; outline-offset: 2px; border-color: #234d3d; } .ds-inline-field:disabled { opacity: .55; cursor: not-allowed; }"
+    },
+    {
+      "name": "Top Navigation",
+      "kind": "nav",
+      "description": "Single-layer local workspace header with restrained brand marker.",
+      "html": "<nav class=\"ds-topbar\"><span class=\"ds-brand-mark\">N</span><strong>Nimbus</strong><small>● Local workspace</small></nav>",
+      "css": ".ds-topbar { height: 72px; padding: 0 28px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(23,34,29,.14); color: #17221d; background: #f6f3eb; } .ds-brand-mark { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; color: #fffdf8; background: #234d3d; font: 400 15px Georgia, serif; } .ds-topbar strong { font: 400 22px Georgia, serif; } .ds-topbar small { margin-left: auto; color: #68756e; font: 400 11px Arial, sans-serif; letter-spacing: .08em; text-transform: uppercase; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "生长中的知识花园",
+    "overview": "Nimbus 是一个安静的个人知识花园。界面给记录、阅读和回顾留出空间，让标签与笔记连接像新枝一样自然出现。颜色来自叶片、土壤和少量手写标记，但产品始终服务于用户的思考，不把视觉隐喻变成装饰负担。系统保持 Notion 的克制、Linear 的清晰，以及 Readwise 的知识回顾感。",
+    "keyCharacteristics": [
+      "森林绿作为主要行动色，使用克制。",
+      "纸面色承载阅读，淡青柠只提示新生和连接。",
+      "陶土橙只用于少量强调，不成为大面积装饰。",
+      "平面为主，结构性阴影只出现在输入和悬停反馈。",
+      "组件保持熟悉、直接、轻触感。"
+    ],
+    "rules": [
+      {
+        "name": "The Garden Restraint Rule",
+        "body": "森林绿用于行动，淡青柠用于状态，陶土橙用于标记。任何一屏都不得让三个强调色同时大面积争夺注意力。",
+        "section": "colors"
+      },
+      {
+        "name": "The Flat Garden Rule",
+        "body": "静止状态下保持平面。除输入区外，卡片只有在交互反馈中获得阴影。",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do 让输入动作成为页面最直接的操作。",
+      "Do 使用 Forest Canopy 承载主要操作，使用 Terracotta Marker 做少量标记。",
+      "Do 支持键盘焦点、减少动态效果和移动端触控区域。"
+    ],
+    "donts": [
+      "Don't 做成企业后台：禁止密集表格、复杂导航和管理系统式的信息堆叠。",
+      "Don't 过度花哨：禁止无意义装饰、喧宾夺主的动画和强烈视觉噪音。",
+      "Don't 制造整理负担：禁止要求用户在记录前先理解复杂分类体系。"
+    ]
+  }
+}
