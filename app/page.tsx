@@ -20,6 +20,8 @@ export default function Home() {
   const [linkTarget, setLinkTarget] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("写下一条笔记，Nimbus 会帮你找到连接。");
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   const selected = notes.find((note) => note.id === selectedId) ?? null;
   const availableLinks = useMemo(
@@ -34,8 +36,23 @@ export default function Home() {
     setNotes(data.notes);
   }
 
+  // First load gets explicit loading + error states so an empty grid is never
+  // mistaken for "0 notes", and a failed fetch offers a retry instead of
+  // silently looking like data loss.
+  async function loadNotes() {
+    setLoading(true);
+    setLoadError(false);
+    try {
+      await refresh();
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
-    void refresh();
+    void loadNotes();
   }, []);
 
   useEffect(() => {
@@ -111,12 +128,11 @@ export default function Home() {
   return (
     <main>
       <header className="topbar">
-        <div className="brand"><span className="brand-mark">N</span><span>Nimbus</span></div>
-        <div className="topbar-meta"><span className="status-dot" /> Local workspace</div>
+        <div className="brand"><span className="brand-mark" aria-hidden="true">N</span><span>Nimbus</span></div>
+        <div className="topbar-meta"><span className="status-dot" aria-hidden="true" /> Local workspace</div>
       </header>
 
       <section className="hero">
-        <p className="eyebrow">PERSONAL KNOWLEDGE STUDIO</p>
         <h1>让每一条记录，<br /><em>自然长出下一步。</em></h1>
         <p className="hero-copy">随手记下概念、工具和灵感。Nimbus 会自动整理标签，并从你的旧笔记中找到值得重新连接的线索。</p>
       </section>
@@ -126,7 +142,7 @@ export default function Home() {
           <div className="composer-heading">
             <div>
               <p className="eyebrow">QUICK CAPTURE</p>
-              <h2>此刻在想什么？</h2>
+              <h2 id="composer-label">此刻在想什么？</h2>
             </div>
             <span className="shortcut">⌘ Enter</span>
           </div>
@@ -136,35 +152,49 @@ export default function Home() {
             onKeyDown={(event) => {
               if ((event.metaKey || event.ctrlKey) && event.key === "Enter") event.currentTarget.form?.requestSubmit();
             }}
+            aria-labelledby="composer-label"
+            aria-label="笔记内容"
             placeholder="记下一个刚学到的概念，或者还没想明白的问题..."
             rows={5}
           />
           <div className="composer-footer">
-            <p>{message}</p>
+            <p role="status" aria-live="polite">{message}</p>
             <button className="primary" disabled={saving || !content.trim()}>{saving ? "整理中..." : "收进 Nimbus"}</button>
           </div>
         </form>
 
         <div className="section-title">
-          <div><p className="eyebrow">RECENT NOTES</p><h2>知识流</h2></div>
-          <span>{notes.length} 条笔记</span>
+          <h2>知识流</h2>
+          <span>{loading ? "加载中…" : `${notes.length} 条笔记`}</span>
         </div>
 
-        {notes.length === 0 ? (
+        {loading ? (
+          <>
+            <p className="sr-only" role="status">正在加载笔记…</p>
+            <div className="note-grid" aria-hidden="true">
+              {[0, 1, 2].map((i) => <div className="note-card skeleton" key={i} />)}
+            </div>
+          </>
+        ) : loadError ? (
+          <div className="empty" role="alert">
+            <h3>笔记加载失败。</h3>
+            <p>可能是网络中断。你的笔记仍然安全，重试即可。</p>
+            <button className="primary" onClick={() => void loadNotes()}>重新加载</button>
+          </div>
+        ) : notes.length === 0 ? (
           <div className="empty">
-            <span>01</span>
             <h3>第一条笔记，从一个念头开始。</h3>
             <p>不需要先想好分类。记录下来，整理的事情交给 Nimbus。</p>
           </div>
         ) : (
           <div className="note-grid">
-            {notes.map((note, index) => (
+            {notes.map((note) => (
               <button className="note-card" key={note.id} onClick={() => setSelectedId(note.id)}>
-                <div className="card-top"><span>{String(index + 1).padStart(2, "0")}</span><time>{formatDate(note.updatedAt)}</time></div>
+                <div className="card-top"><time>{formatDate(note.updatedAt)}</time></div>
                 <h3>{note.title}</h3>
                 <p>{note.content}</p>
                 <div className="tags">{note.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
-                <div className="card-bottom"><span>{note.relatedNotes.length} 个连接</span><b>↗</b></div>
+                <div className="card-bottom"><span>{note.relatedNotes.length} 个连接</span><b aria-hidden="true">↗</b></div>
               </button>
             ))}
           </div>
@@ -172,17 +202,17 @@ export default function Home() {
       </section>
 
       {selected && (
-        <aside className="drawer">
-          <button className="close" onClick={() => setSelectedId(null)}>×</button>
+        <aside className="drawer" role="dialog" aria-modal="false" aria-labelledby="drawer-title">
+          <button className="close" aria-label="关闭笔记详情" onClick={() => setSelectedId(null)}>×</button>
           <p className="eyebrow">NOTE DETAILS</p>
-          <h2>{selected.title}</h2>
+          <h2 id="drawer-title">{selected.title}</h2>
           <time>{formatDate(selected.updatedAt)}</time>
           <p className="detail-content">{selected.content}</p>
 
           <section className="drawer-section">
             <h3>标签</h3>
             <div className="inline-form">
-              <input value={tagDraft} onChange={(event) => setTagDraft(event.target.value)} placeholder="用逗号分隔标签" />
+              <input value={tagDraft} onChange={(event) => setTagDraft(event.target.value)} aria-label="编辑标签，用逗号分隔" placeholder="用逗号分隔标签" />
               <button onClick={saveTags}>保存</button>
             </div>
           </section>
@@ -194,12 +224,12 @@ export default function Home() {
               <div className="related" key={note.id}>
                 <button onClick={() => setSelectedId(note.id)}>{note.title}</button>
                 <span>{note.kind === "manual" ? "手动" : "推荐"}</span>
-                <button className="unlink" onClick={() => updateLink("DELETE", note.id)}>×</button>
+                <button className="unlink" aria-label={`解除与「${note.title}」的关联`} onClick={() => updateLink("DELETE", note.id)}>×</button>
               </div>
             ))}
             {availableLinks.length > 0 && (
               <div className="inline-form add-link">
-                <select value={linkTarget} onChange={(event) => setLinkTarget(event.target.value)}>
+                <select value={linkTarget} onChange={(event) => setLinkTarget(event.target.value)} aria-label="选择要关联的笔记">
                   <option value="">选择一条笔记...</option>
                   {availableLinks.map((note) => <option key={note.id} value={note.id}>{note.title}</option>)}
                 </select>
