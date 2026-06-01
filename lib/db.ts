@@ -62,16 +62,23 @@ function getTags(noteId: number) {
 }
 
 function getRelatedNotes(noteId: number): RelatedNote[] {
+  // Links are conceptually undirected, but a pair can be stored in either
+  // direction (recommended one way, manual the other). Collapse both rows into
+  // a single related note, preferring the 'manual' kind, so the same note never
+  // appears twice (which would also collide on React's `key={note.id}`).
   return db
     .prepare(`
-      SELECT notes.id, notes.title, note_links.kind
+      SELECT notes.id, notes.title,
+        CASE WHEN MIN(CASE note_links.kind WHEN 'manual' THEN 0 ELSE 1 END) = 0
+             THEN 'manual' ELSE 'recommended' END AS kind
       FROM note_links
       JOIN notes ON notes.id = CASE
         WHEN note_links.source_id = ? THEN note_links.target_id
         ELSE note_links.source_id
       END
       WHERE note_links.source_id = ? OR note_links.target_id = ?
-      ORDER BY note_links.kind, notes.updated_at DESC
+      GROUP BY notes.id, notes.title, notes.updated_at
+      ORDER BY kind, notes.updated_at DESC
     `)
     .all(noteId, noteId, noteId) as RelatedNote[];
 }
@@ -132,19 +139,26 @@ export const createNote = db.transaction((content: string, tags: string[], relat
 });
 
 export const updateNoteTags = db.transaction((id: number, tags: string[]) => {
+  // Guard up front: without this, setTags would attempt a note_tags insert with
+  // a dangling note_id, tripping the FK constraint and surfacing as a 500
+  // instead of the intended 404 for a missing note.
+  if (!db.prepare("SELECT 1 FROM notes WHERE id = ?").get(id)) return null;
   setTags(id, tags);
   db.prepare("UPDATE notes SET updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(id);
   return getNote(id);
 });
 
-export function linkNotes(sourceId: number, targetId: number) {
+export const linkNotes = db.transaction((sourceId: number, targetId: number) => {
   if (sourceId === targetId) return getNote(sourceId);
+  // Drop any reverse-direction row first so a manual link never coexists with a
+  // recommended link for the same pair (which would duplicate the relationship).
+  db.prepare("DELETE FROM note_links WHERE source_id = ? AND target_id = ?").run(targetId, sourceId);
   db.prepare(`
     INSERT INTO note_links (source_id, target_id, kind) VALUES (?, ?, 'manual')
     ON CONFLICT(source_id, target_id) DO UPDATE SET kind = 'manual'
   `).run(sourceId, targetId);
   return getNote(sourceId);
-}
+});
 
 export function unlinkNotes(sourceId: number, targetId: number) {
   db.prepare(`

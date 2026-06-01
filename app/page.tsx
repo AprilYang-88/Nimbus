@@ -49,22 +49,29 @@ export default function Home() {
     setSaving(true);
     setMessage("正在整理标签和关联笔记...");
 
-    const response = await fetch("/api/notes", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content }),
-    });
-    const data = (await response.json()) as { note?: Note; analysisSource?: string; error?: string };
+    try {
+      const response = await fetch("/api/notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+      const data = (await response.json()) as { note?: Note; analysisSource?: string; error?: string };
 
-    if (response.ok && data.note) {
-      setContent("");
-      await refresh();
-      setSelectedId(data.note.id);
-      setMessage(data.analysisSource === "openai" ? "AI 已完成整理。" : "已使用本地模式整理，可配置 API Key 开启 AI。");
-    } else {
-      setMessage(data.error ?? "保存失败，请稍后再试。");
+      if (response.ok && data.note) {
+        setContent("");
+        await refresh();
+        setSelectedId(data.note.id);
+        setMessage(data.analysisSource === "openai" ? "AI 已完成整理。" : "已使用本地模式整理，可配置 API Key 开启 AI。");
+      } else {
+        setMessage(data.error ?? "保存失败，请稍后再试。");
+      }
+    } catch {
+      // Without this, a failed request would throw out of the handler and leave
+      // `saving` stuck at true, permanently disabling the composer.
+      setMessage("保存失败，请检查网络后重试。");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   }
 
   async function saveTags() {
