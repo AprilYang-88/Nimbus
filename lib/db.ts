@@ -66,11 +66,14 @@ function getRelatedNotes(noteId: number): RelatedNote[] {
     .prepare(`
       SELECT notes.id, notes.title, note_links.kind
       FROM note_links
-      JOIN notes ON notes.id = note_links.target_id
-      WHERE note_links.source_id = ?
+      JOIN notes ON notes.id = CASE
+        WHEN note_links.source_id = ? THEN note_links.target_id
+        ELSE note_links.source_id
+      END
+      WHERE note_links.source_id = ? OR note_links.target_id = ?
       ORDER BY note_links.kind, notes.updated_at DESC
     `)
-    .all(noteId) as RelatedNote[];
+    .all(noteId, noteId, noteId) as RelatedNote[];
 }
 
 function serialize(row: NoteRow): Note {
@@ -93,6 +96,10 @@ export function listNotes() {
 export function getNote(id: number) {
   const row = db.prepare("SELECT * FROM notes WHERE id = ?").get(id) as NoteRow | undefined;
   return row ? serialize(row) : null;
+}
+
+export function hasNote(id: number) {
+  return Boolean(db.prepare("SELECT 1 FROM notes WHERE id = ?").get(id));
 }
 
 function setTags(noteId: number, tagNames: string[]) {
@@ -140,6 +147,10 @@ export function linkNotes(sourceId: number, targetId: number) {
 }
 
 export function unlinkNotes(sourceId: number, targetId: number) {
-  db.prepare("DELETE FROM note_links WHERE source_id = ? AND target_id = ?").run(sourceId, targetId);
+  db.prepare(`
+    DELETE FROM note_links
+    WHERE (source_id = ? AND target_id = ?)
+      OR (source_id = ? AND target_id = ?)
+  `).run(sourceId, targetId, targetId, sourceId);
   return getNote(sourceId);
 }

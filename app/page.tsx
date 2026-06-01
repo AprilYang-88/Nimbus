@@ -30,6 +30,7 @@ export default function Home() {
   async function refresh() {
     const response = await fetch("/api/notes");
     const data = (await response.json()) as { notes: Note[] };
+    if (!response.ok) throw new Error("读取笔记失败");
     setNotes(data.notes);
   }
 
@@ -68,24 +69,36 @@ export default function Home() {
 
   async function saveTags() {
     if (!selected) return;
-    await fetch(`/api/notes/${selected.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tags: tagDraft.split(",") }),
-    });
-    await refresh();
-    setMessage("标签已更新。");
+    try {
+      const response = await fetch(`/api/notes/${selected.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tags: tagDraft.split(",") }),
+      });
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(data.error ?? "标签更新失败");
+      await refresh();
+      setMessage("标签已更新。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "标签更新失败，请稍后再试。");
+    }
   }
 
   async function updateLink(method: "POST" | "DELETE", targetNoteId: number) {
     if (!selected) return;
-    await fetch(`/api/notes/${selected.id}/links`, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ targetNoteId }),
-    });
-    await refresh();
-    setMessage(method === "POST" ? "已建立笔记连接。" : "已解除笔记连接。");
+    try {
+      const response = await fetch(`/api/notes/${selected.id}/links`, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetNoteId }),
+      });
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(data.error ?? "关联操作失败");
+      await refresh();
+      setMessage(method === "POST" ? "已建立笔记连接。" : "已解除笔记连接。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "关联操作失败，请稍后再试。");
+    }
   }
 
   return (
@@ -192,4 +205,3 @@ export default function Home() {
     </main>
   );
 }
-
