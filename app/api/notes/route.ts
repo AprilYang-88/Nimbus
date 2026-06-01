@@ -4,7 +4,7 @@ import { createNote, listNotes } from "@/lib/db";
 export const runtime = "nodejs";
 
 export async function GET() {
-  return Response.json({ notes: listNotes() });
+  return Response.json({ notes: await listNotes() });
 }
 
 export async function POST(request: Request) {
@@ -15,8 +15,8 @@ export async function POST(request: Request) {
     return Response.json({ error: "请输入笔记内容" }, { status: 400 });
   }
 
-  const analysis = await analyzeNote(content, listNotes());
-  const note = createNote(content, analysis.tags, analysis.relatedNoteIds);
+  const analysis = await analyzeNote(content, await listNotes());
+  const note = await createNote(content, analysis.tags, analysis.relatedNoteIds);
   return Response.json({ note, analysisSource: analysis.source }, { status: 201 });
 }
 

@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
 import type { Note, RelatedNote } from "@/lib/types";
+import type { DbBackend } from "@/lib/db/backend";
 
 const dataDir = path.join(process.cwd(), "data");
 fs.mkdirSync(dataDir, { recursive: true });
@@ -95,17 +96,17 @@ function serialize(row: NoteRow): Note {
   };
 }
 
-export function listNotes() {
+function listNotes() {
   const rows = db.prepare("SELECT * FROM notes ORDER BY updated_at DESC, id DESC").all() as NoteRow[];
   return rows.map(serialize);
 }
 
-export function getNote(id: number) {
+function getNote(id: number) {
   const row = db.prepare("SELECT * FROM notes WHERE id = ?").get(id) as NoteRow | undefined;
   return row ? serialize(row) : null;
 }
 
-export function hasNote(id: number) {
+function hasNote(id: number) {
   return Boolean(db.prepare("SELECT 1 FROM notes WHERE id = ?").get(id));
 }
 
@@ -123,7 +124,7 @@ function setTags(noteId: number, tagNames: string[]) {
   }
 }
 
-export const createNote = db.transaction((content: string, tags: string[], relatedIds: number[]) => {
+const createNote = db.transaction((content: string, tags: string[], relatedIds: number[]) => {
   const firstLine = content.split("\n").find((line) => line.trim()) ?? "未命名笔记";
   const title = firstLine.trim().slice(0, 42);
   const result = db.prepare("INSERT INTO notes (title, content) VALUES (?, ?)").run(title, content.trim());
@@ -138,7 +139,7 @@ export const createNote = db.transaction((content: string, tags: string[], relat
   return getNote(noteId)!;
 });
 
-export const updateNoteTags = db.transaction((id: number, tags: string[]) => {
+const updateNoteTags = db.transaction((id: number, tags: string[]) => {
   // Guard up front: without this, setTags would attempt a note_tags insert with
   // a dangling note_id, tripping the FK constraint and surfacing as a 500
   // instead of the intended 404 for a missing note.
@@ -148,7 +149,7 @@ export const updateNoteTags = db.transaction((id: number, tags: string[]) => {
   return getNote(id);
 });
 
-export const linkNotes = db.transaction((sourceId: number, targetId: number) => {
+const linkNotes = db.transaction((sourceId: number, targetId: number) => {
   if (sourceId === targetId) return getNote(sourceId);
   // Drop any reverse-direction row first so a manual link never coexists with a
   // recommended link for the same pair (which would duplicate the relationship).
@@ -160,7 +161,7 @@ export const linkNotes = db.transaction((sourceId: number, targetId: number) => 
   return getNote(sourceId);
 });
 
-export function unlinkNotes(sourceId: number, targetId: number) {
+function unlinkNotes(sourceId: number, targetId: number) {
   db.prepare(`
     DELETE FROM note_links
     WHERE (source_id = ? AND target_id = ?)
@@ -168,3 +169,29 @@ export function unlinkNotes(sourceId: number, targetId: number) {
   `).run(sourceId, targetId, targetId, sourceId);
   return getNote(sourceId);
 }
+
+// better-sqlite3 is synchronous; wrap each call in an async method so this
+// backend satisfies the shared (Promise-returning) DbBackend contract.
+export const backend: DbBackend = {
+  async listNotes() {
+    return listNotes();
+  },
+  async getNote(id) {
+    return getNote(id);
+  },
+  async hasNote(id) {
+    return hasNote(id);
+  },
+  async createNote(content, tags, relatedIds) {
+    return createNote(content, tags, relatedIds);
+  },
+  async updateNoteTags(id, tags) {
+    return updateNoteTags(id, tags);
+  },
+  async linkNotes(sourceId, targetId) {
+    return linkNotes(sourceId, targetId);
+  },
+  async unlinkNotes(sourceId, targetId) {
+    return unlinkNotes(sourceId, targetId);
+  },
+};

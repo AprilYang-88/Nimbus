@@ -35,5 +35,16 @@ LLM_MODEL=deepseek-v4-flash
 
 ## 数据
 
-SQLite 数据库会自动创建在 `data/nimbus.db`。该目录已加入 `.gitignore`，不会提交个人笔记。
+存储后端按环境变量自动切换：
+
+- **不设 `DATABASE_URL`（默认）**：使用本地 SQLite，数据库自动创建在 `data/nimbus.db`。该目录已加入 `.gitignore`，不会提交个人笔记。
+- **设了 `DATABASE_URL`**：使用云端 Supabase / Postgres，应用首次启动时自动建表。
+
+启用 Supabase：在 Supabase 控制台 `Project Settings → Database → Connection string` 复制连接串（建议用连接池 pooler，端口 6543），填入 `.env.local`：
+
+```bash
+DATABASE_URL=postgresql://postgres.xxxx:[PASSWORD]@aws-0-xxx.pooler.supabase.com:6543/postgres
+```
+
+两种后端的表结构与行为一致（notes / tags / note_tags / note_links）。
 
