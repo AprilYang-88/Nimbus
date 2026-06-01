@@ -16,13 +16,17 @@ npm run dev
 
 不配置 `LLM_API_KEY` 时，Nimbus 会使用本地分词规则生成标签和关联推荐，便于立即体验完整流程。
 
-需要启用大模型时，在 `.env.local` 中填写任意 **OpenAI 兼容的 Chat Completions** 接口（OpenAI、智谱 GLM 等均可）：
+需要启用大模型时，在 `.env.local` 中填写任意 **OpenAI 兼容的 Chat Completions** 接口（DeepSeek、智谱 GLM、OpenAI 等均可）：
 
 ```bash
-# 智谱 GLM
+# DeepSeek
 LLM_API_KEY=your_api_key
-LLM_BASE_URL=https://open.bigmodel.cn/api/paas/v4
-LLM_MODEL=glm-4-flash
+LLM_BASE_URL=https://api.deepseek.com
+LLM_MODEL=deepseek-v4-flash
+
+# 或 智谱 GLM
+# LLM_BASE_URL=https://open.bigmodel.cn/api/paas/v4
+# LLM_MODEL=glm-4-flash
 
 # 或 OpenAI
 # LLM_BASE_URL=https://api.openai.com/v1
