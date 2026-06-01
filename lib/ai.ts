@@ -12,9 +12,24 @@ const stopWords = new Set([
   "这个", "进行", "使用", "通过", "因为", "如果", "笔记", "学习",
 ]);
 
+// ICU-backed word segmentation (built into Node via Intl) so Chinese is split
+// into real words instead of arbitrary fixed-length character chunks. The old
+// /[\u4e00-\u9fff]{2,6}/ regex sliced a long run like "\u67b6\u6784\u662f\u73b0\u4ee3\u5927\u8bed\u8a00\u6a21\u578b\u7684\u57fa\u7840"
+// into meaningless 6-char fragments ("\u67b6\u6784\u662f\u73b0\u4ee3\u5927", "\u8bed\u8a00\u6a21\u578b\u7684\u57fa").
+const segmenter = new Intl.Segmenter("zh", { granularity: "word" });
+
 function terms(text: string) {
-  return (text.toLowerCase().match(/[\u4e00-\u9fff]{2,6}|[a-z][a-z0-9-]{2,}/g) ?? [])
-    .filter((word) => !stopWords.has(word));
+  const out: string[] = [];
+  for (const { segment, isWordLike } of segmenter.segment(text.toLowerCase())) {
+    if (!isWordLike) continue;
+    const word = segment.trim();
+    if (!word || stopWords.has(word)) continue;
+    // Drop single-character CJK particles (\u7684/\u662f/\u4e86\u2026) and very short Latin tokens.
+    const isCJK = /[\u4e00-\u9fff]/.test(word);
+    if (isCJK ? word.length < 2 : word.length < 3) continue;
+    out.push(word);
+  }
+  return out;
 }
 
 function localAnalysis(content: string, notes: Note[]): Analysis {
