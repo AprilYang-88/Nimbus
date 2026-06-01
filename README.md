@@ -14,16 +14,37 @@ npm run dev
 
 ## AI 模式
 
-不配置 `OPENAI_API_KEY` 时，Nimbus 会使用本地关键词规则生成标签和关联推荐，便于立即体验完整流程。
+不配置 `LLM_API_KEY` 时，Nimbus 会使用本地分词规则生成标签和关联推荐，便于立即体验完整流程。
 
-需要启用 OpenAI 时，在 `.env.local` 中填写：
+需要启用大模型时，在 `.env.local` 中填写任意 **OpenAI 兼容的 Chat Completions** 接口（DeepSeek、智谱 GLM、OpenAI 等均可）：
 
 ```bash
-OPENAI_API_KEY=your_api_key
-OPENAI_MODEL=gpt-5-mini
+# DeepSeek
+LLM_API_KEY=your_api_key
+LLM_BASE_URL=https://api.deepseek.com
+LLM_MODEL=deepseek-v4-flash
+
+# 或 智谱 GLM
+# LLM_BASE_URL=https://open.bigmodel.cn/api/paas/v4
+# LLM_MODEL=glm-4-flash
+
+# 或 OpenAI
+# LLM_BASE_URL=https://api.openai.com/v1
+# LLM_MODEL=gpt-4o-mini
 ```
 
 ## 数据
 
-SQLite 数据库会自动创建在 `data/nimbus.db`。该目录已加入 `.gitignore`，不会提交个人笔记。
+存储后端按环境变量自动切换：
+
+- **不设 `DATABASE_URL`（默认）**：使用本地 SQLite，数据库自动创建在 `data/nimbus.db`。该目录已加入 `.gitignore`，不会提交个人笔记。
+- **设了 `DATABASE_URL`**：使用云端 Supabase / Postgres，应用首次启动时自动建表。
+
+启用 Supabase：在 Supabase 控制台 `Project Settings → Database → Connection string` 复制连接串（建议用连接池 pooler，端口 6543），填入 `.env.local`：
+
+```bash
+DATABASE_URL=postgresql://postgres.xxxx:[PASSWORD]@aws-0-xxx.pooler.supabase.com:6543/postgres
+```
+
+两种后端的表结构与行为一致（notes / tags / note_tags / note_links）。
 
