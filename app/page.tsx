@@ -61,7 +61,7 @@ export default function Home() {
         setContent("");
         await refresh();
         setSelectedId(data.note.id);
-        setMessage(data.analysisSource === "openai" ? "AI 已完成整理。" : "已使用本地模式整理，可配置 API Key 开启 AI。");
+        setMessage(data.analysisSource === "local" ? "已使用本地模式整理，可配置 API Key 开启 AI。" : "AI 已完成整理。");
       } else {
         setMessage(data.error ?? "保存失败，请稍后再试。");
       }

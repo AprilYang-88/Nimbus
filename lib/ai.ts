@@ -3,8 +3,17 @@ import type { Note } from "@/lib/types";
 type Analysis = {
   tags: string[];
   relatedNoteIds: number[];
-  source: "openai" | "local";
+  source: "llm" | "local";
 };
+
+// LLM config. Works with any OpenAI-compatible Chat Completions endpoint
+// (OpenAI, 智谱 GLM, etc.). The legacy OPENAI_* names are still read so existing
+// setups keep working.
+const LLM_API_KEY = process.env.LLM_API_KEY ?? process.env.OPENAI_API_KEY;
+const LLM_BASE_URL = (
+  process.env.LLM_BASE_URL ?? process.env.OPENAI_BASE_URL ?? "https://open.bigmodel.cn/api/paas/v4"
+).replace(/\/+$/, "");
+const LLM_MODEL = process.env.LLM_MODEL ?? process.env.OPENAI_MODEL ?? "glm-4-flash";
 
 const stopWords = new Set([
   "this", "that", "with", "from", "have", "will", "about", "into", "when",
@@ -64,30 +73,35 @@ function localAnalysis(content: string, notes: Note[]): Analysis {
   };
 }
 
-function parseOutputText(payload: unknown) {
-  const response = payload as {
-    output?: Array<{ content?: Array<{ type?: string; text?: string }> }>;
-  };
-
-  return response.output
-    ?.flatMap((item) => item.content ?? [])
-    .find((item) => item.type === "output_text")?.text;
+// Some models wrap JSON in ```json ... ``` fences even in JSON mode; strip them
+// before parsing.
+function stripJsonFences(text: string) {
+  return text
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/, "")
+    .trim();
 }
 
-async function openaiAnalysis(content: string, notes: Note[]): Promise<Analysis> {
-  const response = await fetch("https://api.openai.com/v1/responses", {
+async function llmAnalysis(content: string, notes: Note[]): Promise<Analysis> {
+  const response = await fetch(`${LLM_BASE_URL}/chat/completions`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      Authorization: `Bearer ${LLM_API_KEY}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: process.env.OPENAI_MODEL ?? "gpt-5-mini",
-      input: [
+      model: LLM_MODEL,
+      temperature: 0.2,
+      response_format: { type: "json_object" },
+      messages: [
         {
           role: "system",
           content:
-            "You organize a personal learning notebook. Return 2-4 concise Chinese tags and up to 3 IDs of genuinely related existing notes. Never invent IDs.",
+            "你在整理一个人的学习笔记本。只输出一个 JSON 对象，" +
+            '格式为 {"tags": string[], "relatedNoteIds": number[]}。' +
+            "tags 给 2-4 个简洁的中文标签；relatedNoteIds 从用户提供的 existingNotes 里挑出最多 3 条" +
+            "真正相关的笔记 id，不相关就返回空数组，绝不要编造不存在的 id。",
         },
         {
           role: "user",
@@ -97,47 +111,51 @@ async function openaiAnalysis(content: string, notes: Note[]): Promise<Analysis>
           }),
         },
       ],
-      text: {
-        format: {
-          type: "json_schema",
-          name: "nimbus_note_analysis",
-          strict: true,
-          schema: {
-            type: "object",
-            properties: {
-              tags: { type: "array", items: { type: "string" }, minItems: 2, maxItems: 4 },
-              relatedNoteIds: { type: "array", items: { type: "integer" }, maxItems: 3 },
-            },
-            required: ["tags", "relatedNoteIds"],
-            additionalProperties: false,
-          },
-        },
-      },
     }),
   });
 
   if (!response.ok) {
-    throw new Error(`OpenAI request failed: ${response.status}`);
+    throw new Error(`LLM request failed: ${response.status} ${await response.text()}`);
   }
 
-  const text = parseOutputText(await response.json());
-  if (!text) throw new Error("OpenAI response did not include output text");
+  const payload = (await response.json()) as {
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+  const text = payload.choices?.[0]?.message?.content;
+  if (!text) throw new Error("LLM response did not include any content");
 
-  const parsed = JSON.parse(text) as Omit<Analysis, "source">;
+  const parsed = JSON.parse(stripJsonFences(text)) as {
+    tags?: unknown;
+    relatedNoteIds?: unknown;
+  };
+
+  const tags = Array.isArray(parsed.tags)
+    ? parsed.tags
+        .filter((tag): tag is string => typeof tag === "string")
+        .map((tag) => tag.trim())
+        .filter(Boolean)
+    : [];
+  if (!tags.length) throw new Error("LLM response did not include any tags");
+
   const allowedIds = new Set(notes.map((note) => note.id));
+  const relatedNoteIds = Array.isArray(parsed.relatedNoteIds)
+    ? parsed.relatedNoteIds
+        .map((id) => Number(id))
+        .filter((id) => Number.isInteger(id) && allowedIds.has(id))
+    : [];
 
   return {
-    tags: parsed.tags.slice(0, 4),
-    relatedNoteIds: parsed.relatedNoteIds.filter((id) => allowedIds.has(id)).slice(0, 3),
-    source: "openai",
+    tags: tags.slice(0, 4),
+    relatedNoteIds: relatedNoteIds.slice(0, 3),
+    source: "llm",
   };
 }
 
 export async function analyzeNote(content: string, notes: Note[]): Promise<Analysis> {
-  if (!process.env.OPENAI_API_KEY) return localAnalysis(content, notes);
+  if (!LLM_API_KEY) return localAnalysis(content, notes);
 
   try {
-    return await openaiAnalysis(content, notes);
+    return await llmAnalysis(content, notes);
   } catch (error) {
     console.error("Falling back to local note analysis", error);
     return localAnalysis(content, notes);

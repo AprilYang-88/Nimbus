@@ -14,13 +14,19 @@ npm run dev
 
 ## AI 模式
 
-不配置 `OPENAI_API_KEY` 时，Nimbus 会使用本地关键词规则生成标签和关联推荐，便于立即体验完整流程。
+不配置 `LLM_API_KEY` 时，Nimbus 会使用本地分词规则生成标签和关联推荐，便于立即体验完整流程。
 
-需要启用 OpenAI 时，在 `.env.local` 中填写：
+需要启用大模型时，在 `.env.local` 中填写任意 **OpenAI 兼容的 Chat Completions** 接口（OpenAI、智谱 GLM 等均可）：
 
 ```bash
-OPENAI_API_KEY=your_api_key
-OPENAI_MODEL=gpt-5-mini
+# 智谱 GLM
+LLM_API_KEY=your_api_key
+LLM_BASE_URL=https://open.bigmodel.cn/api/paas/v4
+LLM_MODEL=glm-4-flash
+
+# 或 OpenAI
+# LLM_BASE_URL=https://api.openai.com/v1
+# LLM_MODEL=gpt-4o-mini
 ```
 
 ## 数据
